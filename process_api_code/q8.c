@@ -131,3 +131,15 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+
+/**********
+ * OUTPUT
+ **********
+ * hello world (pid:97220)
+ * hello, I am read-only child (pid:97221)
+ * hello, I am the parent (pid:97220)
+ * hello, I am write-only child (pid:97222)
+ *       14
+ * Write-only child exited normally with status: 0
+ * Read-only child exited normally with status: 0
+ */
