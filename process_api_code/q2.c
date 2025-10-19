@@ -4,13 +4,19 @@
  * and parent access the file descriptor returned by open()? What
  * happens when they are writing to the file concurrently, i.e., at the
  * same time?
+ * 
+ * Answers:
+ * - Both child and parent can access the file descriptor
+ * - When both child and parent write to the file concurrently, 
+ *   the outcome is a race-condition where the order of writes is 
+ *   non-determinitic
  */
 
- #include <unistd.h>
- #include <stdio.h>
- #include <stdlib.h>
- #include <fcntl.h>
- #include <string.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <string.h>
 
 int main(int argc, char *argv[]) {
 
@@ -30,12 +36,12 @@ int main(int argc, char *argv[]) {
     }
     printf("File %s opened successfully with file descriptor: %d\n", filename, fd);
 
-    int rc = fork();
-    if (rc < 0) {
+    pid_t childPid = fork();
+    if (childPid < 0) {
         // fork failed; exit
         fprintf(stderr, "fork failed\n");
-        exit(1);
-    } else if (rc == 0) {
+        exit(EXIT_FAILURE);
+    } else if (childPid == 0) {
         // child (new process)
         printf("hello, I am child (pid:%d) with fd=%d\n", (int) getpid(), fd);
         
@@ -47,7 +53,7 @@ int main(int argc, char *argv[]) {
         if (bytes_written == -1) {
             perror("Error writing to file");
             close(fd); // Close the file descriptor before exiting
-            return 1;
+            exit(EXIT_FAILURE);
         } else if (bytes_written != strlen(data_to_write)) {
             fprintf(stderr, "Warning: Not all data was written to the file.\n");
         } else {
@@ -56,7 +62,7 @@ int main(int argc, char *argv[]) {
 
     } else {
         // parent goes down this path (original process)
-        printf("hello, I am parent of %d (pid:%d) with fd=%d\n", rc, (int) getpid(), fd);
+        printf("hello, I am parent of %d (pid:%d) with fd=%d\n", childPid, (int) getpid(), fd);
         
         const char *data_to_write = "Hello, world! - by parent\n";
         ssize_t bytes_written;
@@ -66,7 +72,7 @@ int main(int argc, char *argv[]) {
         if (bytes_written == -1) {
             perror("Error writing to file");
             close(fd); // Close the file descriptor before exiting
-            return 1;
+            exit(EXIT_FAILURE);
         } else if (bytes_written != strlen(data_to_write)) {
             fprintf(stderr, "Warning: Not all data was written to the file.\n");
         } else {
@@ -77,7 +83,7 @@ int main(int argc, char *argv[]) {
     // Close the file descriptor
     if (close(fd) == -1) {
         perror("Error closing file");
-        return 1;
+        exit(EXIT_FAILURE);
     }
 
     return 0;
